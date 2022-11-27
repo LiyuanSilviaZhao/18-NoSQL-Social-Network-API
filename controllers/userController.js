@@ -13,9 +13,8 @@ module.exports = {
   // Get a single User
   getSingleUser(req, res) {
     User.findOne({ _id: req.params.userId })
-      .select('-__v')
-      .populate('thoughts')
-      .populate('friends')
+      .populate({ path: 'friends', select: '-__v' })
+      .populate({ path: 'thoughts', select: '-__v' })
       .then((user) =>
         !user
           ? res.status(404).json({ message: 'No user with that ID' })
@@ -37,26 +36,23 @@ module.exports = {
     .then((user) =>
     !user
       ? res.status(404).json({ message: 'No user with that ID' })
-      : Thoughts.deleteMany({ _id: { $in: user.thoughts } })
-  )
-  .then(() => res.json({ message: 'User and associated thoughts deleted!' }))
-  .catch((err) => res.status(500).json(err));
+      : user.deleteMany({ _id: { $in: user.thoughts } })
+    ).then(() => res.json({ message: 'User and associated thoughts deleted!' }))
+    .catch((err) => res.status(500).json(err));
   },
 
   // Update a User
   updateUser(req, res) {
-    Users.findOneAndUpdate({_id: req.params.userId}, req.body, {new:true})
+    User.findOneAndUpdate({_id: req.params.userId}, req.body, {new:true})
     .then((User) => res.json(User))
     .catch((err) => res.status(500).json(err));
   },
 
   // Add a new friend to a User
   addFriend(req, res) {
-    console.log('You are adding a friend');
-    console.log(req.body);
     User.findOneAndUpdate(
       { _id: req.params.userId },
-      { $addToSet: { friends: req.body } },
+      { $addToSet: { friends: req.params.friendId } },
       { runValidators: true, new: true }
     )
       .then((User) =>
